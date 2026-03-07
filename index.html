@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="theme-color" content="#5a7a6b">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -53,7 +54,6 @@
     margin-top: 4px;
   }
 
-  /* 업로드 영역 */
   .upload-area {
     background: var(--card);
     border: 2px dashed var(--border);
@@ -71,10 +71,7 @@
     background: #f0f5f2;
   }
 
-  .upload-icon {
-    font-size: 40px;
-    margin-bottom: 10px;
-  }
+  .upload-icon { font-size: 40px; margin-bottom: 10px; }
 
   .upload-text {
     font-size: 15px;
@@ -82,15 +79,9 @@
     line-height: 1.6;
   }
 
-  .upload-text strong {
-    color: var(--primary);
-  }
+  .upload-text strong { color: var(--primary); }
 
-  /* 이미지 미리보기 */
-  .preview-section {
-    display: none;
-    margin-bottom: 16px;
-  }
+  .preview-section { display: none; margin-bottom: 16px; }
 
   .preview-header {
     display: flex;
@@ -100,22 +91,10 @@
     padding: 0 2px;
   }
 
-  .preview-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--primary);
-  }
+  .preview-title { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .preview-count { font-size: 13px; color: var(--sub); }
 
-  .preview-count {
-    font-size: 13px;
-    color: var(--sub);
-  }
-
-  .preview-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+  .preview-list { display: flex; flex-wrap: wrap; gap: 10px; }
 
   .preview-item {
     position: relative;
@@ -127,231 +106,136 @@
     background: var(--bg);
   }
 
-  .preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .preview-item img { width: 100%; height: 100%; object-fit: cover; }
 
   .preview-item .page-num {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    font-size: 11px;
-    text-align: center;
-    padding: 2px;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.5); color: #fff;
+    font-size: 11px; text-align: center; padding: 2px;
   }
 
   .preview-item .remove-btn {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
+    position: absolute; top: 2px; right: 2px;
+    width: 22px; height: 22px; border-radius: 50%;
+    border: none; background: rgba(0,0,0,0.5); color: #fff;
+    font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
   }
 
-  /* 버튼 */
-  .btn-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+  .btn-row { display: flex; gap: 10px; margin-bottom: 16px; }
 
   .btn {
-    flex: 1;
-    padding: 14px;
-    border: none;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: opacity 0.2s;
+    flex: 1; padding: 14px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: opacity 0.2s;
     -webkit-tap-highlight-color: transparent;
   }
 
   .btn:active { opacity: 0.8; }
 
   .btn-primary {
-    background: var(--primary);
-    color: #fff;
+    background: var(--primary); color: #fff;
     box-shadow: 0 2px 8px rgba(90,122,107,0.2);
   }
 
   .btn-primary:disabled {
-    background: var(--border);
-    color: var(--sub);
-    box-shadow: none;
-    cursor: default;
-    opacity: 1;
+    background: var(--border); color: var(--sub);
+    box-shadow: none; cursor: default; opacity: 1;
   }
 
   .btn-secondary {
-    background: var(--card);
-    color: var(--primary);
+    background: var(--card); color: var(--primary);
     border: 1.5px solid var(--border);
   }
 
   .btn-danger {
-    background: var(--card);
-    color: var(--red);
+    background: var(--card); color: var(--red);
     border: 1.5px solid var(--border);
   }
 
-  /* 언어 선택 */
-  .lang-section {
+  .options-section {
     background: var(--card);
     border-radius: var(--radius);
     padding: 14px 16px;
     margin-bottom: 16px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    display: none;
   }
 
-  .lang-label {
+  .option-label {
     font-size: 13px;
     color: var(--sub);
     margin-bottom: 8px;
   }
 
-  .lang-list {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+  .option-list { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .option-btn {
+    padding: 7px 16px; border-radius: 20px;
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--sub); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
   }
 
-  .lang-btn {
-    padding: 7px 16px;
-    border-radius: 20px;
-    border: 1.5px solid var(--border);
-    background: var(--bg);
-    color: var(--sub);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .lang-btn.selected {
-    background: var(--primary);
-    color: #fff;
+  .option-btn.selected {
+    background: var(--primary); color: #fff;
     border-color: var(--primary);
   }
 
-  /* 진행률 */
-  .progress-section {
-    display: none;
-    margin-bottom: 16px;
-  }
+  .progress-section { display: none; margin-bottom: 16px; }
 
   .progress-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: var(--sub);
-    margin-bottom: 6px;
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: var(--sub); margin-bottom: 6px;
   }
 
   .progress-bar-wrap {
-    height: 8px;
-    background: var(--border);
-    border-radius: 4px;
-    overflow: hidden;
+    height: 8px; background: var(--border);
+    border-radius: 4px; overflow: hidden;
   }
 
   .progress-bar {
-    height: 100%;
-    background: var(--primary);
-    border-radius: 4px;
-    width: 0%;
-    transition: width 0.3s;
+    height: 100%; background: var(--primary);
+    border-radius: 4px; width: 0%; transition: width 0.3s;
   }
 
   .progress-status {
-    font-size: 13px;
-    color: var(--primary);
-    margin-top: 6px;
-    text-align: center;
-    font-weight: 500;
+    font-size: 13px; color: var(--primary);
+    margin-top: 6px; text-align: center; font-weight: 500;
   }
 
-  /* 결과 */
-  .result-section {
-    display: none;
-    margin-bottom: 16px;
-  }
+  .result-section { display: none; margin-bottom: 16px; }
 
   .result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 10px;
   }
 
-  .result-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--primary);
-  }
-
-  .result-chars {
-    font-size: 13px;
-    color: var(--sub);
-  }
+  .result-title { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .result-chars { font-size: 13px; color: var(--sub); }
 
   .result-text {
-    width: 100%;
-    min-height: 300px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    font-size: 15px;
-    font-family: inherit;
-    line-height: 1.7;
-    background: var(--card);
-    color: var(--text);
+    width: 100%; min-height: 300px;
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; font-size: 15px; font-family: inherit;
+    line-height: 1.7; background: var(--card); color: var(--text);
     resize: vertical;
   }
 
-  .result-text:focus {
-    outline: none;
-    border-color: var(--primary-light);
-  }
+  .result-text:focus { outline: none; border-color: var(--primary-light); }
 
-  /* 토스트 */
   .toast {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
+    position: fixed; bottom: 30px; left: 50%;
     transform: translateX(-50%) translateY(80px);
-    background: var(--primary);
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-size: 14px;
-    font-weight: 500;
-    opacity: 0;
-    transition: all 0.3s ease;
-    pointer-events: none;
-    z-index: 100;
-    white-space: nowrap;
+    background: var(--primary); color: #fff;
+    padding: 12px 24px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; opacity: 0;
+    transition: all 0.3s ease; pointer-events: none;
+    z-index: 100; white-space: nowrap;
   }
 
   .toast.show {
-    transform: translateX(-50%) translateY(0);
-    opacity: 1;
+    transform: translateX(-50%) translateY(0); opacity: 1;
   }
 
   @media (min-width: 640px) {
@@ -364,40 +248,46 @@
 
 <header>
   <h1>책 스캐너</h1>
-  <p>책 이미지를 텍스트로 변환합니다</p>
+  <p>책 이미지/PDF를 텍스트로 변환합니다</p>
 </header>
 
 <!-- 업로드 -->
 <div class="upload-area" id="uploadArea">
   <div class="upload-icon">&#128214;</div>
   <div class="upload-text">
-    <strong>이미지를 선택</strong>하거나 여기에 끌어다 놓으세요<br>
-    JPG, PNG, WEBP 지원 — 여러 장 가능
+    <strong>파일을 선택</strong>하거나 여기에 끌어다 놓으세요<br>
+    이미지 (JPG, PNG, WEBP) 또는 PDF — 여러 장 가능
   </div>
-  <input type="file" id="fileInput" accept="image/*" multiple hidden>
+  <input type="file" id="fileInput" accept="image/*,.pdf" multiple hidden>
 </div>
 
 <!-- 이미지 미리보기 -->
 <div class="preview-section" id="previewSection">
   <div class="preview-header">
-    <span class="preview-title">선택한 이미지</span>
+    <span class="preview-title">선택한 페이지</span>
     <span class="preview-count" id="previewCount"></span>
   </div>
   <div class="preview-list" id="previewList"></div>
 
   <div class="btn-row" style="margin-top: 14px;">
-    <button class="btn btn-secondary" id="addMoreBtn">이미지 추가</button>
+    <button class="btn btn-secondary" id="addMoreBtn">파일 추가</button>
     <button class="btn btn-danger" id="clearBtn">전체 삭제</button>
   </div>
 </div>
 
-<!-- 언어 선택 -->
-<div class="lang-section" id="langSection" style="display:none;">
-  <div class="lang-label">텍스트 언어</div>
-  <div class="lang-list">
-    <button class="lang-btn selected" data-lang="kor">한국어</button>
-    <button class="lang-btn" data-lang="eng">영어</button>
-    <button class="lang-btn" data-lang="kor+eng">한국어+영어</button>
+<!-- 옵션 -->
+<div class="options-section" id="optionsSection">
+  <div class="option-label">텍스트 언어</div>
+  <div class="option-list" id="langList">
+    <button class="option-btn selected" data-lang="kor+eng">한국어+영어</button>
+    <button class="option-btn" data-lang="kor">한국어만</button>
+    <button class="option-btn" data-lang="eng">영어만</button>
+  </div>
+
+  <div class="option-label" style="margin-top: 14px;">다운로드 형식</div>
+  <div class="option-list" id="formatList">
+    <button class="option-btn selected" data-fmt="md">.md (마크다운)</button>
+    <button class="option-btn" data-fmt="txt">.txt (텍스트)</button>
   </div>
 </div>
 
@@ -427,7 +317,7 @@
   <textarea class="result-text" id="resultText" placeholder="변환된 텍스트가 여기에 표시됩니다..."></textarea>
 
   <div class="btn-row" style="margin-top: 14px;">
-    <button class="btn btn-primary" id="downloadBtn">다운로드 (.md)</button>
+    <button class="btn btn-primary" id="downloadBtn">다운로드</button>
     <button class="btn btn-secondary" id="copyBtn">텍스트 복사</button>
   </div>
 </div>
@@ -435,8 +325,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-var images = [];
-var selectedLang = 'kor';
+// pdf.js 워커 설정
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+var pageBlobs = [];   // OCR에 넘길 blob 배열
+var pageThumbs = [];  // 미리보기용 URL 배열
+var selectedLang = 'kor+eng';
+var selectedFormat = 'md';
 var isProcessing = false;
 
 // ──────────────────────────
@@ -450,11 +345,10 @@ uploadArea.addEventListener('click', function() {
 });
 
 fileInput.addEventListener('change', function(e) {
-  addFiles(e.target.files);
+  handleFiles(e.target.files);
   fileInput.value = '';
 });
 
-// 드래그 앤 드롭
 uploadArea.addEventListener('dragover', function(e) {
   e.preventDefault();
   uploadArea.classList.add('dragover');
@@ -467,26 +361,70 @@ uploadArea.addEventListener('dragleave', function() {
 uploadArea.addEventListener('drop', function(e) {
   e.preventDefault();
   uploadArea.classList.remove('dragover');
-  addFiles(e.dataTransfer.files);
+  handleFiles(e.dataTransfer.files);
 });
 
-function addFiles(fileList) {
+async function handleFiles(fileList) {
   for (var i = 0; i < fileList.length; i++) {
     var file = fileList[i];
-    if (!file.type.startsWith('image/')) continue;
-    images.push(file);
+
+    if (file.type === 'application/pdf') {
+      await extractPdfPages(file);
+    } else if (file.type.startsWith('image/')) {
+      var url = URL.createObjectURL(file);
+      pageBlobs.push(file);
+      pageThumbs.push(url);
+    }
   }
   renderPreviews();
 }
 
-// 추가 버튼
+// ──────────────────────────
+// PDF → 이미지 변환
+// ──────────────────────────
+async function extractPdfPages(file) {
+  try {
+    var arrayBuf = await file.arrayBuffer();
+    var pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise;
+    var totalPages = pdf.numPages;
+
+    showToast('PDF ' + totalPages + '페이지 로딩 중...');
+
+    for (var p = 1; p <= totalPages; p++) {
+      var page = await pdf.getPage(p);
+      var scale = 2.0;  // 고해상도 렌더링
+      var viewport = page.getViewport({ scale: scale });
+
+      var canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      var ctx = canvas.getContext('2d');
+
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+      var blob = await new Promise(function(resolve) {
+        canvas.toBlob(function(b) { resolve(b); }, 'image/png');
+      });
+
+      var url = URL.createObjectURL(blob);
+      pageBlobs.push(blob);
+      pageThumbs.push(url);
+    }
+  } catch (err) {
+    showToast('PDF 읽기 오류');
+    console.error(err);
+  }
+}
+
+// 추가/삭제
 document.getElementById('addMoreBtn').addEventListener('click', function() {
   fileInput.click();
 });
 
-// 전체 삭제
 document.getElementById('clearBtn').addEventListener('click', function() {
-  images = [];
+  pageThumbs.forEach(function(u) { URL.revokeObjectURL(u); });
+  pageBlobs = [];
+  pageThumbs = [];
   renderPreviews();
   document.getElementById('resultSection').style.display = 'none';
 });
@@ -497,41 +435,44 @@ document.getElementById('clearBtn').addEventListener('click', function() {
 function renderPreviews() {
   var section = document.getElementById('previewSection');
   var list = document.getElementById('previewList');
-  var langSection = document.getElementById('langSection');
+  var optionsSection = document.getElementById('optionsSection');
   var convertWrap = document.getElementById('convertWrap');
 
-  if (images.length === 0) {
+  if (pageBlobs.length === 0) {
     section.style.display = 'none';
-    langSection.style.display = 'none';
+    optionsSection.style.display = 'none';
     convertWrap.style.display = 'none';
     return;
   }
 
   section.style.display = 'block';
-  langSection.style.display = 'block';
+  optionsSection.style.display = 'block';
   convertWrap.style.display = 'block';
-  document.getElementById('previewCount').textContent = images.length + '장';
+  document.getElementById('previewCount').textContent = pageBlobs.length + '장';
 
   list.innerHTML = '';
-  images.forEach(function(file, idx) {
+  pageBlobs.forEach(function(blob, idx) {
     var div = document.createElement('div');
     div.className = 'preview-item';
 
     var img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    img.onload = function() { URL.revokeObjectURL(img.src); };
+    img.src = pageThumbs[idx];
 
     var num = document.createElement('div');
     num.className = 'page-num';
-    num.textContent = (idx + 1) + '/' + images.length;
+    num.textContent = (idx + 1) + '/' + pageBlobs.length;
 
     var removeBtn = document.createElement('button');
     removeBtn.className = 'remove-btn';
     removeBtn.innerHTML = '&times;';
-    removeBtn.addEventListener('click', function() {
-      images.splice(idx, 1);
-      renderPreviews();
-    });
+    removeBtn.addEventListener('click', (function(i) {
+      return function() {
+        URL.revokeObjectURL(pageThumbs[i]);
+        pageBlobs.splice(i, 1);
+        pageThumbs.splice(i, 1);
+        renderPreviews();
+      };
+    })(idx));
 
     div.appendChild(img);
     div.appendChild(num);
@@ -541,35 +482,37 @@ function renderPreviews() {
 }
 
 // ──────────────────────────
-// 언어 선택
+// 옵션 선택
 // ──────────────────────────
-document.querySelector('.lang-list').addEventListener('click', function(e) {
-  var btn = e.target.closest('.lang-btn');
+document.getElementById('langList').addEventListener('click', function(e) {
+  var btn = e.target.closest('.option-btn');
   if (!btn) return;
-
-  document.querySelectorAll('.lang-btn').forEach(function(b) { b.classList.remove('selected'); });
+  document.querySelectorAll('#langList .option-btn').forEach(function(b) { b.classList.remove('selected'); });
   btn.classList.add('selected');
   selectedLang = btn.dataset.lang;
 });
 
-// ──────────────────────────
-// OCR 변환
-// ──────────────────────────
-document.getElementById('convertBtn').addEventListener('click', startConvert);
+document.getElementById('formatList').addEventListener('click', function(e) {
+  var btn = e.target.closest('.option-btn');
+  if (!btn) return;
+  document.querySelectorAll('#formatList .option-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedFormat = btn.dataset.fmt;
+});
 
 // ──────────────────────────
-// 이미지 전처리 (OCR 정확도 향상)
+// 이미지 전처리 (한영 혼합 최적화)
 // ──────────────────────────
-function preprocessImage(file) {
+function preprocessImage(blob) {
   return new Promise(function(resolve) {
     var img = new Image();
     img.onload = function() {
       var canvas = document.createElement('canvas');
       var ctx = canvas.getContext('2d');
 
-      // 해상도가 너무 낮으면 2배 확대 (작은 글씨 인식 향상)
+      // 저해상도면 2배 확대
       var scale = 1;
-      if (img.width < 1000) scale = 2;
+      if (img.width < 1200) scale = 2;
 
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
@@ -577,46 +520,101 @@ function preprocessImage(file) {
       // 원본 그리기
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // 그레이스케일 + 대비 강화 + 노이즈 제거
       var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       var data = imageData.data;
+      var w = canvas.width;
+      var h = canvas.height;
 
+      // 1단계: 그레이스케일 변환
+      var grayArr = new Float32Array(w * h);
       for (var i = 0; i < data.length; i += 4) {
-        // 그레이스케일 변환
-        var gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+        grayArr[i / 4] = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+      }
 
-        // 대비 강화 (contrast stretch)
-        gray = ((gray - 128) * 1.5) + 128;
-        if (gray < 0) gray = 0;
-        if (gray > 255) gray = 255;
+      // 2단계: 적응형 이진화 (로컬 평균 기반)
+      // 주변 블록의 평균 밝기와 비교하여 글자/배경 구분
+      // 영어 얇은 글씨도 보존됨
+      var blockSize = 25;  // 주변 참조 영역
+      var C = 10;          // 민감도 (낮을수록 더 많이 검정으로 판단)
 
-        // 이진화 (텍스트를 선명하게)
-        // 부드러운 임계값 — 너무 강하면 얇은 글씨가 사라짐
-        if (gray < 140) {
-          gray = 0;    // 글자 → 검정
-        } else if (gray > 200) {
-          gray = 255;  // 배경 → 흰색
+      // 적분 이미지 (integral image) 로 빠른 로컬 평균 계산
+      var integral = new Float64Array((w + 1) * (h + 1));
+      for (var y = 0; y < h; y++) {
+        var rowSum = 0;
+        for (var x = 0; x < w; x++) {
+          rowSum += grayArr[y * w + x];
+          integral[(y + 1) * (w + 1) + (x + 1)] = integral[y * (w + 1) + (x + 1)] + rowSum;
         }
-        // 140~200 사이는 그대로 유지 (경계 부분)
+      }
 
-        data[i] = gray;
-        data[i+1] = gray;
-        data[i+2] = gray;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          var half = Math.floor(blockSize / 2);
+          var x1 = Math.max(0, x - half);
+          var y1 = Math.max(0, y - half);
+          var x2 = Math.min(w - 1, x + half);
+          var y2 = Math.min(h - 1, y + half);
+
+          var count = (x2 - x1 + 1) * (y2 - y1 + 1);
+          var sum = integral[(y2 + 1) * (w + 1) + (x2 + 1)]
+                  - integral[y1 * (w + 1) + (x2 + 1)]
+                  - integral[(y2 + 1) * (w + 1) + x1]
+                  + integral[y1 * (w + 1) + x1];
+
+          var localMean = sum / count;
+          var pixel = grayArr[y * w + x];
+
+          // 픽셀이 로컬 평균보다 C만큼 어두우면 글자(검정)
+          var val = (pixel < localMean - C) ? 0 : 255;
+
+          var idx = (y * w + x) * 4;
+          data[idx] = val;
+          data[idx + 1] = val;
+          data[idx + 2] = val;
+        }
       }
 
       ctx.putImageData(imageData, 0, 0);
 
-      canvas.toBlob(function(blob) {
+      canvas.toBlob(function(b) {
         URL.revokeObjectURL(img.src);
-        resolve(blob);
+        resolve(b);
       }, 'image/png');
     };
-    img.src = URL.createObjectURL(file);
+    img.src = URL.createObjectURL(blob);
   });
 }
 
+// ──────────────────────────
+// 텍스트 후처리
+// ──────────────────────────
+function cleanText(text) {
+  // 특수문자만 있는 줄 제거
+  text = text.replace(/^[^\w가-힣a-zA-Z0-9]+$/gm, '');
+
+  // 페이지 번호 패턴 제거 (줄 전체가 숫자 1~4자리만)
+  text = text.replace(/^\s*\d{1,4}\s*$/gm, '');
+
+  // 머리글/바닥글 패턴 제거 (흔한 패턴)
+  // "- 123 -" 또는 "| 123 |" 같은 페이지 번호
+  text = text.replace(/^[\s\-|]*\d{1,4}[\s\-|]*$/gm, '');
+
+  // 3줄 이상 빈줄 → 2줄로
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // 연속 공백 → 1개로
+  text = text.replace(/[ \t]{2,}/g, ' ');
+
+  return text.trim();
+}
+
+// ──────────────────────────
+// OCR 변환
+// ──────────────────────────
+document.getElementById('convertBtn').addEventListener('click', startConvert);
+
 async function startConvert() {
-  if (images.length === 0 || isProcessing) return;
+  if (pageBlobs.length === 0 || isProcessing) return;
   isProcessing = true;
 
   var convertBtn = document.getElementById('convertBtn');
@@ -628,7 +626,7 @@ async function startConvert() {
   progressSection.style.display = 'block';
   resultSection.style.display = 'none';
 
-  updateProgress(0, images.length, '엔진 로딩 중...');
+  updateProgress(0, pageBlobs.length, '엔진 로딩 중...');
 
   var allText = [];
 
@@ -636,33 +634,33 @@ async function startConvert() {
     var worker = await Tesseract.createWorker(selectedLang, 1, {
       logger: function(m) {
         if (m.status === 'loading tesseract core') {
-          updateProgress(0, images.length, 'OCR 엔진 로딩 중...');
+          updateProgress(0, pageBlobs.length, 'OCR 엔진 로딩 중...');
         } else if (m.status === 'loading language traineddata') {
-          updateProgress(0, images.length, '언어 데이터 로딩 중...');
+          updateProgress(0, pageBlobs.length, '언어 데이터 로딩 중...');
         }
       }
     });
 
-    for (var i = 0; i < images.length; i++) {
-      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' 전처리 중...');
+    for (var i = 0; i < pageBlobs.length; i++) {
+      updateProgress(i, pageBlobs.length, (i + 1) + '/' + pageBlobs.length + ' 전처리 중...');
 
-      // 이미지 전처리 (흑백 + 대비 강화 + 노이즈 제거)
-      var processed = await preprocessImage(images[i]);
+      var processed = await preprocessImage(pageBlobs[i]);
 
-      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' OCR 처리 중...');
+      updateProgress(i, pageBlobs.length, (i + 1) + '/' + pageBlobs.length + ' OCR 처리 중...');
 
       var result = await worker.recognize(processed);
-      var text = result.data.text.trim();
-
-      // 후처리: 의미없는 단일 특수문자, 연속 공백 정리
-      text = text.replace(/^[^\w가-힣a-zA-Z0-9]+$/gm, '');  // 특수문자만 있는 줄 제거
-      text = text.replace(/\n{3,}/g, '\n\n');                 // 3줄 이상 빈줄 → 2줄로
-      text = text.replace(/[ \t]{2,}/g, ' ');                 // 연속 공백 → 1개로
-      text = text.trim();
+      var text = cleanText(result.data.text);
 
       if (text) {
-        allText.push('<!-- 페이지 ' + (i + 1) + ' -->\n\n' + text);
+        if (selectedFormat === 'md') {
+          allText.push('<!-- 페이지 ' + (i + 1) + ' -->\n\n' + text);
+        } else {
+          allText.push('[페이지 ' + (i + 1) + ']\n\n' + text);
+        }
       }
+
+      // 메모리 해제
+      processed = null;
     }
 
     await worker.terminate();
@@ -671,8 +669,8 @@ async function startConvert() {
     console.error(err);
   }
 
-  // 결과 표시
-  var combined = allText.join('\n\n---\n\n');
+  var separator = selectedFormat === 'md' ? '\n\n---\n\n' : '\n\n────────────\n\n';
+  var combined = allText.join(separator);
   document.getElementById('resultText').value = combined;
   document.getElementById('resultChars').textContent = combined.length + '자';
 
@@ -684,12 +682,11 @@ async function startConvert() {
   isProcessing = false;
 
   if (combined.length > 0) {
-    showToast(images.length + '장 변환 완료!');
+    showToast(pageBlobs.length + '장 변환 완료!');
   } else {
     showToast('텍스트를 인식하지 못했습니다');
   }
 
-  // 결과로 스크롤
   setTimeout(function() {
     resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 100);
@@ -713,7 +710,10 @@ document.getElementById('downloadBtn').addEventListener('click', function() {
     return;
   }
 
-  var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  var ext = selectedFormat === 'md' ? '.md' : '.txt';
+  var mimeType = selectedFormat === 'md' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8';
+
+  var blob = new Blob([text], { type: mimeType });
   var url = URL.createObjectURL(blob);
 
   var now = new Date();
@@ -722,7 +722,7 @@ document.getElementById('downloadBtn').addEventListener('click', function() {
   var d = String(now.getDate()).padStart(2, '0');
   var h = String(now.getHours()).padStart(2, '0');
   var min = String(now.getMinutes()).padStart(2, '0');
-  var filename = 'book-scan-' + y + m + d + '-' + h + min + '.md';
+  var filename = 'book-scan-' + y + m + d + '-' + h + min + ext;
 
   var a = document.createElement('a');
   a.href = url;
@@ -763,7 +763,7 @@ function fallbackCopy(text) {
   try {
     document.execCommand('copy');
     showToast('클립보드에 복사했어요');
-  } catch {
+  } catch (e) {
     showToast('복사에 실패했습니다');
   }
 }
