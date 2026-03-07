@@ -557,6 +557,64 @@ document.querySelector('.lang-list').addEventListener('click', function(e) {
 // ──────────────────────────
 document.getElementById('convertBtn').addEventListener('click', startConvert);
 
+// ──────────────────────────
+// 이미지 전처리 (OCR 정확도 향상)
+// ──────────────────────────
+function preprocessImage(file) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+
+      // 해상도가 너무 낮으면 2배 확대 (작은 글씨 인식 향상)
+      var scale = 1;
+      if (img.width < 1000) scale = 2;
+
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+
+      // 원본 그리기
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // 그레이스케일 + 대비 강화 + 노이즈 제거
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var data = imageData.data;
+
+      for (var i = 0; i < data.length; i += 4) {
+        // 그레이스케일 변환
+        var gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+
+        // 대비 강화 (contrast stretch)
+        gray = ((gray - 128) * 1.5) + 128;
+        if (gray < 0) gray = 0;
+        if (gray > 255) gray = 255;
+
+        // 이진화 (텍스트를 선명하게)
+        // 부드러운 임계값 — 너무 강하면 얇은 글씨가 사라짐
+        if (gray < 140) {
+          gray = 0;    // 글자 → 검정
+        } else if (gray > 200) {
+          gray = 255;  // 배경 → 흰색
+        }
+        // 140~200 사이는 그대로 유지 (경계 부분)
+
+        data[i] = gray;
+        data[i+1] = gray;
+        data[i+2] = gray;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob(function(blob) {
+        URL.revokeObjectURL(img.src);
+        resolve(blob);
+      }, 'image/png');
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 async function startConvert() {
   if (images.length === 0 || isProcessing) return;
   isProcessing = true;
@@ -586,10 +644,21 @@ async function startConvert() {
     });
 
     for (var i = 0; i < images.length; i++) {
-      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' 페이지 처리 중...');
+      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' 전처리 중...');
 
-      var result = await worker.recognize(images[i]);
+      // 이미지 전처리 (흑백 + 대비 강화 + 노이즈 제거)
+      var processed = await preprocessImage(images[i]);
+
+      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' OCR 처리 중...');
+
+      var result = await worker.recognize(processed);
       var text = result.data.text.trim();
+
+      // 후처리: 의미없는 단일 특수문자, 연속 공백 정리
+      text = text.replace(/^[^\w가-힣a-zA-Z0-9]+$/gm, '');  // 특수문자만 있는 줄 제거
+      text = text.replace(/\n{3,}/g, '\n\n');                 // 3줄 이상 빈줄 → 2줄로
+      text = text.replace(/[ \t]{2,}/g, ' ');                 // 연속 공백 → 1개로
+      text = text.trim();
 
       if (text) {
         allText.push('<!-- 페이지 ' + (i + 1) + ' -->\n\n' + text);
