@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>책 스캐너</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#5a7a6b">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f7f5f2;
+    --card: #ffffff;
+    --primary: #5a7a6b;
+    --primary-light: #8aad9b;
+    --text: #2d3a33;
+    --sub: #8e9a92;
+    --border: #dde3df;
+    --red: #c0392b;
+    --radius: 14px;
+    --accent: #e8a87c;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 40px);
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  header {
+    text-align: center;
+    padding: 20px 0 16px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  header p {
+    font-size: 13px;
+    color: var(--sub);
+    margin-top: 4px;
+  }
+
+  /* 업로드 영역 */
+  .upload-area {
+    background: var(--card);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 16px;
+  }
+
+  .upload-area:hover,
+  .upload-area.dragover {
+    border-color: var(--primary);
+    background: #f0f5f2;
+  }
+
+  .upload-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+  }
+
+  .upload-text {
+    font-size: 15px;
+    color: var(--sub);
+    line-height: 1.6;
+  }
+
+  .upload-text strong {
+    color: var(--primary);
+  }
+
+  /* 이미지 미리보기 */
+  .preview-section {
+    display: none;
+    margin-bottom: 16px;
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 2px;
+  }
+
+  .preview-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .preview-count {
+    font-size: 13px;
+    color: var(--sub);
+  }
+
+  .preview-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .preview-item {
+    position: relative;
+    width: 90px;
+    height: 120px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .preview-item .page-num {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 11px;
+    text-align: center;
+    padding: 2px;
+  }
+
+  .preview-item .remove-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  /* 버튼 */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { opacity: 0.8; }
+
+  .btn-primary {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(90,122,107,0.2);
+  }
+
+  .btn-primary:disabled {
+    background: var(--border);
+    color: var(--sub);
+    box-shadow: none;
+    cursor: default;
+    opacity: 1;
+  }
+
+  .btn-secondary {
+    background: var(--card);
+    color: var(--primary);
+    border: 1.5px solid var(--border);
+  }
+
+  .btn-danger {
+    background: var(--card);
+    color: var(--red);
+    border: 1.5px solid var(--border);
+  }
+
+  /* 언어 선택 */
+  .lang-section {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .lang-label {
+    font-size: 13px;
+    color: var(--sub);
+    margin-bottom: 8px;
+  }
+
+  .lang-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .lang-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--sub);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .lang-btn.selected {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+
+  /* 진행률 */
+  .progress-section {
+    display: none;
+    margin-bottom: 16px;
+  }
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--sub);
+    margin-bottom: 6px;
+  }
+
+  .progress-bar-wrap {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .progress-status {
+    font-size: 13px;
+    color: var(--primary);
+    margin-top: 6px;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  /* 결과 */
+  .result-section {
+    display: none;
+    margin-bottom: 16px;
+  }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .result-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .result-chars {
+    font-size: 13px;
+    color: var(--sub);
+  }
+
+  .result-text {
+    width: 100%;
+    min-height: 300px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.7;
+    background: var(--card);
+    color: var(--text);
+    resize: vertical;
+  }
+
+  .result-text:focus {
+    outline: none;
+    border-color: var(--primary-light);
+  }
+
+  /* 토스트 */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--primary);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  @media (min-width: 640px) {
+    body { padding: 24px 24px 60px; }
+    .preview-item { width: 100px; height: 130px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>책 스캐너</h1>
+  <p>책 이미지를 텍스트로 변환합니다</p>
+</header>
+
+<!-- 업로드 -->
+<div class="upload-area" id="uploadArea">
+  <div class="upload-icon">&#128214;</div>
+  <div class="upload-text">
+    <strong>이미지를 선택</strong>하거나 여기에 끌어다 놓으세요<br>
+    JPG, PNG, WEBP 지원 — 여러 장 가능
+  </div>
+  <input type="file" id="fileInput" accept="image/*" multiple hidden>
+</div>
+
+<!-- 이미지 미리보기 -->
+<div class="preview-section" id="previewSection">
+  <div class="preview-header">
+    <span class="preview-title">선택한 이미지</span>
+    <span class="preview-count" id="previewCount"></span>
+  </div>
+  <div class="preview-list" id="previewList"></div>
+
+  <div class="btn-row" style="margin-top: 14px;">
+    <button class="btn btn-secondary" id="addMoreBtn">이미지 추가</button>
+    <button class="btn btn-danger" id="clearBtn">전체 삭제</button>
+  </div>
+</div>
+
+<!-- 언어 선택 -->
+<div class="lang-section" id="langSection" style="display:none;">
+  <div class="lang-label">텍스트 언어</div>
+  <div class="lang-list">
+    <button class="lang-btn selected" data-lang="kor">한국어</button>
+    <button class="lang-btn" data-lang="eng">영어</button>
+    <button class="lang-btn" data-lang="kor+eng">한국어+영어</button>
+  </div>
+</div>
+
+<!-- 변환 버튼 -->
+<div id="convertWrap" style="display:none;">
+  <button class="btn btn-primary" id="convertBtn" style="width:100%;">텍스트 변환 시작</button>
+</div>
+
+<!-- 진행률 -->
+<div class="progress-section" id="progressSection">
+  <div class="progress-info">
+    <span id="progressLabel">준비 중...</span>
+    <span id="progressPercent">0%</span>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="progress-status" id="progressStatus"></div>
+</div>
+
+<!-- 결과 -->
+<div class="result-section" id="resultSection">
+  <div class="result-header">
+    <span class="result-title">변환 결과</span>
+    <span class="result-chars" id="resultChars"></span>
+  </div>
+  <textarea class="result-text" id="resultText" placeholder="변환된 텍스트가 여기에 표시됩니다..."></textarea>
+
+  <div class="btn-row" style="margin-top: 14px;">
+    <button class="btn btn-primary" id="downloadBtn">다운로드 (.md)</button>
+    <button class="btn btn-secondary" id="copyBtn">텍스트 복사</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var images = [];
+var selectedLang = 'kor';
+var isProcessing = false;
+
+// ──────────────────────────
+// 업로드 영역
+// ──────────────────────────
+var uploadArea = document.getElementById('uploadArea');
+var fileInput = document.getElementById('fileInput');
+
+uploadArea.addEventListener('click', function() {
+  if (!isProcessing) fileInput.click();
+});
+
+fileInput.addEventListener('change', function(e) {
+  addFiles(e.target.files);
+  fileInput.value = '';
+});
+
+// 드래그 앤 드롭
+uploadArea.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', function() {
+  uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', function(e) {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  addFiles(e.dataTransfer.files);
+});
+
+function addFiles(fileList) {
+  for (var i = 0; i < fileList.length; i++) {
+    var file = fileList[i];
+    if (!file.type.startsWith('image/')) continue;
+    images.push(file);
+  }
+  renderPreviews();
+}
+
+// 추가 버튼
+document.getElementById('addMoreBtn').addEventListener('click', function() {
+  fileInput.click();
+});
+
+// 전체 삭제
+document.getElementById('clearBtn').addEventListener('click', function() {
+  images = [];
+  renderPreviews();
+  document.getElementById('resultSection').style.display = 'none';
+});
+
+// ──────────────────────────
+// 미리보기
+// ──────────────────────────
+function renderPreviews() {
+  var section = document.getElementById('previewSection');
+  var list = document.getElementById('previewList');
+  var langSection = document.getElementById('langSection');
+  var convertWrap = document.getElementById('convertWrap');
+
+  if (images.length === 0) {
+    section.style.display = 'none';
+    langSection.style.display = 'none';
+    convertWrap.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  langSection.style.display = 'block';
+  convertWrap.style.display = 'block';
+  document.getElementById('previewCount').textContent = images.length + '장';
+
+  list.innerHTML = '';
+  images.forEach(function(file, idx) {
+    var div = document.createElement('div');
+    div.className = 'preview-item';
+
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    img.onload = function() { URL.revokeObjectURL(img.src); };
+
+    var num = document.createElement('div');
+    num.className = 'page-num';
+    num.textContent = (idx + 1) + '/' + images.length;
+
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.addEventListener('click', function() {
+      images.splice(idx, 1);
+      renderPreviews();
+    });
+
+    div.appendChild(img);
+    div.appendChild(num);
+    div.appendChild(removeBtn);
+    list.appendChild(div);
+  });
+}
+
+// ──────────────────────────
+// 언어 선택
+// ──────────────────────────
+document.querySelector('.lang-list').addEventListener('click', function(e) {
+  var btn = e.target.closest('.lang-btn');
+  if (!btn) return;
+
+  document.querySelectorAll('.lang-btn').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  selectedLang = btn.dataset.lang;
+});
+
+// ──────────────────────────
+// OCR 변환
+// ──────────────────────────
+document.getElementById('convertBtn').addEventListener('click', startConvert);
+
+async function startConvert() {
+  if (images.length === 0 || isProcessing) return;
+  isProcessing = true;
+
+  var convertBtn = document.getElementById('convertBtn');
+  convertBtn.disabled = true;
+  convertBtn.textContent = '변환 중...';
+
+  var progressSection = document.getElementById('progressSection');
+  var resultSection = document.getElementById('resultSection');
+  progressSection.style.display = 'block';
+  resultSection.style.display = 'none';
+
+  updateProgress(0, images.length, '엔진 로딩 중...');
+
+  var allText = [];
+
+  try {
+    var worker = await Tesseract.createWorker(selectedLang, 1, {
+      logger: function(m) {
+        if (m.status === 'loading tesseract core') {
+          updateProgress(0, images.length, 'OCR 엔진 로딩 중...');
+        } else if (m.status === 'loading language traineddata') {
+          updateProgress(0, images.length, '언어 데이터 로딩 중...');
+        }
+      }
+    });
+
+    for (var i = 0; i < images.length; i++) {
+      updateProgress(i, images.length, (i + 1) + '/' + images.length + ' 페이지 처리 중...');
+
+      var result = await worker.recognize(images[i]);
+      var text = result.data.text.trim();
+
+      if (text) {
+        allText.push('<!-- 페이지 ' + (i + 1) + ' -->\n\n' + text);
+      }
+    }
+
+    await worker.terminate();
+  } catch (err) {
+    showToast('변환 중 오류가 발생했습니다');
+    console.error(err);
+  }
+
+  // 결과 표시
+  var combined = allText.join('\n\n---\n\n');
+  document.getElementById('resultText').value = combined;
+  document.getElementById('resultChars').textContent = combined.length + '자';
+
+  progressSection.style.display = 'none';
+  resultSection.style.display = 'block';
+
+  convertBtn.disabled = false;
+  convertBtn.textContent = '다시 변환';
+  isProcessing = false;
+
+  if (combined.length > 0) {
+    showToast(images.length + '장 변환 완료!');
+  } else {
+    showToast('텍스트를 인식하지 못했습니다');
+  }
+
+  // 결과로 스크롤
+  setTimeout(function() {
+    resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+function updateProgress(current, total, status) {
+  var pct = total > 0 ? Math.round((current / total) * 100) : 0;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressPercent').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = current + ' / ' + total + ' 완료';
+  document.getElementById('progressStatus').textContent = status || '';
+}
+
+// ──────────────────────────
+// 다운로드
+// ──────────────────────────
+document.getElementById('downloadBtn').addEventListener('click', function() {
+  var text = document.getElementById('resultText').value;
+  if (!text.trim()) {
+    showToast('다운로드할 텍스트가 없습니다');
+    return;
+  }
+
+  var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var h = String(now.getHours()).padStart(2, '0');
+  var min = String(now.getMinutes()).padStart(2, '0');
+  var filename = 'book-scan-' + y + m + d + '-' + h + min + '.md';
+
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast('다운로드 완료');
+});
+
+// ──────────────────────────
+// 복사
+// ──────────────────────────
+document.getElementById('copyBtn').addEventListener('click', function() {
+  var text = document.getElementById('resultText').value;
+  if (!text.trim()) {
+    showToast('복사할 텍스트가 없습니다');
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('클립보드에 복사했어요');
+    }).catch(function() {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+});
+
+function fallbackCopy(text) {
+  var ta = document.getElementById('resultText');
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  try {
+    document.execCommand('copy');
+    showToast('클립보드에 복사했어요');
+  } catch {
+    showToast('복사에 실패했습니다');
+  }
+}
+
+// ──────────────────────────
+// 토스트
+// ──────────────────────────
+function showToast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2200);
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(function() {});
+}
+</script>
+</body>
+</html>
