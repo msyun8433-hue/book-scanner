@@ -556,37 +556,98 @@ function preprocessImage(blob) {
 // 텍스트 후처리
 // ──────────────────────────
 function cleanText(text) {
-  // 특수문자만 있는 줄 제거
-  text = text.replace(/^[^\w가-힣a-zA-Z0-9]+$/gm, '');
+  var lines = text.split('\n');
+  var cleaned = [];
 
-  // 페이지 번호 패턴 제거
-  text = text.replace(/^\s*\d{1,4}\s*$/gm, '');
-  text = text.replace(/^[\s\-|]*\d{1,4}[\s\-|]*$/gm, '');
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
 
-  // OCR 흔한 오류 패턴 정리
-  // 한글 사이에 끼어든 의미없는 특수문자
-  text = text.replace(/([가-힣])[|l]{1,2}([가-힣])/g, '$1$2');
-  // 한글 사이 랜덤 점/콤마
-  text = text.replace(/([가-힣])[\.,]{2,}([가-힣])/g, '$1. $2');
-  // 깨진 따옴표 정리
-  text = text.replace(/[""‟„]/g, '"');
-  text = text.replace(/[''‛‚]/g, "'");
-  // 연속된 특수문자 (3개 이상) 제거
-  text = text.replace(/[^\w가-힣a-zA-Z0-9\s.,;:!?'"()\-]{3,}/g, '');
+    // 빈 줄은 문단 구분으로 유지
+    if (line === '') {
+      cleaned.push('');
+      continue;
+    }
 
-  // 줄 시작의 의미없는 특수문자 제거
-  text = text.replace(/^[\s]*[|l]{1,3}[\s]*/gm, '');
+    // 의미 있는 문자(한글, 영어, 숫자) 비율 계산
+    var meaningful = (line.match(/[가-힣a-zA-Z0-9]/g) || []).length;
+    var total = line.length;
+    var ratio = meaningful / total;
 
-  // 3줄 이상 빈줄 → 2줄로
-  text = text.replace(/\n{3,}/g, '\n\n');
+    // 의미있는 문자가 30% 미만인 줄은 쓰레기 (도형, 기호, 워터마크)
+    if (ratio < 0.3 && total > 2) continue;
 
-  // 연속 공백 → 1개로
-  text = text.replace(/[ \t]{2,}/g, ' ');
+    // 숫자만 있는 줄 (페이지 번호, 워터마크 숫자)
+    if (/^\s*[\d\s\-|.]+\s*$/.test(line)) continue;
 
-  // 빈 줄 양쪽 공백 정리
-  text = text.replace(/\n\s+\n/g, '\n\n');
+    // 3글자 이하이고 의미없는 내용 (기호, 단일 문자)
+    if (total <= 3 && ratio < 0.5) continue;
 
-  return text.trim();
+    // 도형/테이블 문자 제거 (박스 드로잉, 화살표 등)
+    line = line.replace(/[─│┌┐└┘├┤┬┴┼━┃╋▶▷►▸◀◁◄◂△▽▲▼○●◎□■◇◆☆★→←↑↓↔⇒⇐⇑⇓]/g, '');
+
+    // 깨진 따옴표 정리
+    line = line.replace(/[""‟„]/g, '"');
+    line = line.replace(/[''‛‚]/g, "'");
+
+    // 한글 사이에 끼어든 의미없는 특수문자
+    line = line.replace(/([가-힣])[|l]{1,2}([가-힣])/g, '$1$2');
+
+    // 연속 특수문자 (3개 이상) 제거
+    line = line.replace(/[^\w가-힣a-zA-Z0-9\s.,;:!?'"()\-]{3,}/g, '');
+
+    // 줄 시작의 쓸데없는 특수문자
+    line = line.replace(/^[|l\-_=+*#~`]+\s*/, '');
+
+    // 정리 후 빈 줄이면 스킵
+    line = line.replace(/\s+/g, ' ').trim();
+    if (line === '') continue;
+
+    cleaned.push(line);
+  }
+
+  // 줄바꿈 이어붙이기: 문장 중간에서 끊긴 줄을 합침
+  var result = [];
+  var buffer = '';
+
+  for (var j = 0; j < cleaned.length; j++) {
+    var cur = cleaned[j];
+
+    // 빈 줄 = 문단 구분
+    if (cur === '') {
+      if (buffer) {
+        result.push(buffer);
+        buffer = '';
+      }
+      result.push('');
+      continue;
+    }
+
+    if (buffer === '') {
+      buffer = cur;
+    } else {
+      // 이전 줄이 문장 끝(마침표, 물음표, 느낌표, 따옴표+마침표)으로 끝나면 새 줄
+      var endsWithPeriod = /[.。!?…」】\)'"》]$/.test(buffer);
+      // 현재 줄이 새 문단 시작처럼 보이면 (숫자+점, 대시, 불릿 등)
+      var startsNewParagraph = /^[\d]+[.)]\s|^[-•·]\s|^[A-Z][A-Z]|^제\d|^Chapter|^PART/i.test(cur);
+
+      if (endsWithPeriod || startsNewParagraph) {
+        result.push(buffer);
+        buffer = cur;
+      } else {
+        // 문장 중간이면 이어붙이기
+        buffer += ' ' + cur;
+      }
+    }
+  }
+  if (buffer) result.push(buffer);
+
+  // 최종 정리
+  var final = result.join('\n');
+
+  // 연속 빈줄 정리
+  final = final.replace(/\n{3,}/g, '\n\n');
+
+  return final.trim();
 }
 
 // ──────────────────────────
